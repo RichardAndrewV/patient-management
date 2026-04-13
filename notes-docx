@@ -1,0 +1,173 @@
+Docker Image -> contains all the facilities needed to run an app like runtime, src code, dependencies and config needed in SpringBoot Project
+It gives a real production like environment for deploying application like redis , load balancer , cross proxy server etc it containerize them so that there is no version mismatch during runtime.
+Docker Image Repository this is were all the docker images are stored.
+Once a image is pulled into Docker Image Repository the containers are created and this were the application runs.
+Set up the environments variables and the bind ports for accessing the db through host port because we cannot access from container port.
+And then Bind Mounts for backup data , since once the container is restarted the data in the app will be lost so it is used as a backup. The containers run independently in separate environments to we are adding it to a network so it can communicate with each other.
+┌────────────────────────────┐
+│        IntelliJ IDE        │
+│                            │
+│  Spring Boot Application   │
+│                            │
+│  Controller                │
+│  Service                   │
+│  Repository (JPA)          │
+└──────────────┬─────────────┘
+               │ JDBC
+               │ localhost:5000
+               ▼
+┌────────────────────────────┐
+│      Docker Container      │
+│                            │
+│       PostgreSQL DB        │
+│       port 5432            │
+└────────────────────────────┘
+JDBC for talking to the databases like HTTP protocol for API
+Here we have the privilege to create a separate db image(postgres) and like separate app patient service and deploy it in same network but each are independent so it has good speed and other advantages.
+
+Service → Database (internal Docker network)
+patient-service
+       │
+       ▼
+patient-service-db:5432
+jdbc:postgresql://patient-service-db:5432/db
+IntelliJ → Database (for debugging)
+IntelliJ
+   │
+   ▼
+localhost:5000
+   │
+   ▼
+postgres container
+host → container communication.
+development/debugging.
+Client → Service (API)
+Browser/Postman
+      │
+      ▼
+localhost:8080
+      │
+      ▼
+patient-service
+In production:
+User
+ │
+ ▼
+API Gateway
+ │
+ ▼
+patient-service
+ │
+ ▼
+PostgreSQL
+
+GRPC and REST uses HTTP protocol grpc provides low latency and increased performance in terms of internal communication between the micro services.
+gRPC, Protocol Buffers (Protobuf) format it is like json in HTTP but here it is in binary format and more efficient.
+PROTO FILE
+The proto file is like something which defines the methods present in the Service and the response and the request format its name is similar to the Service itself. Helps in interacting with each other microservices like it sets up the gRPC server and the gRPC client. In this lot of other microservices like appointment service just needs to use proto file of billing service so it regenerates teh code needed for communication between the appointment and billing through gRPC server and client.
+
+
+                     gRPC Architecture
+
+
+                           Docker Network
+┌──────────────────────────────────────────────────────────────────────┐
+
+
+     +---------------------+
+     |  Frontend (Client)  |
+     +---------------------+
+               |
+               | REST Request (JSON)
+               v
+
+        +---------------------------+
+        |      Patient Service      |
+        |       (micro-service)     |
+        |                           |
+        |       [ gRPC Client ]     |
+        +---------------------------+
+                     |
+                     |  gRPC Request (Protobuf)
+                     |  defined in
+                     |  billing_service.proto
+                     v
+
+                +---------------------------+
+                |       Billing Service     |
+                |        (micro-service)    |
+                |                           |
+                |       [ gRPC Server ]     |
+                +---------------------------+
+
+
+
+        +---------------------------+
+        |    Appointment Service    |
+        |       (micro-service)     |
+        |                           |
+        |       [ gRPC Client ]     |
+        +---------------------------+
+                     |
+                     |  gRPC Request
+                     |  (Protobuf)
+                     v
+                +---------------------------+
+                |       Billing Service     |
+                |        (micro-service)    |
+                |       [ gRPC Server ]     |
+                +---------------------------+
+
+
+                Shared Contract
+                ----------------
+                billing_service.proto
+
+
+└──────────────────────────────────────────────────────────────────────┘
+Architecture Explanation
+Frontend → communicates with Patient Service using REST (JSON).
+Patient Service → calls Billing Service using gRPC.
+Appointment Service → also calls Billing Service using gRPC.
+gRPC communication uses Protocol Buffers defined in:
+billing_service.proto
+Billing Service exposes a gRPC Server.
+Other microservices act as gRPC Clients.
+
+In gRPC(microservices using it)
+use gRPC and proto dependencies in pom.xml
+The build section in pom has some build steps to build the Protocol Buffer file whenever we restart the app, it tells the maven to do it.
+The maven helps in generating the code to interact with the billing Service grpc server(The code is generated in the target folder)
+A gRPC stub is a generated client class that allows one service to call remote gRPC methods like normal Java methods.
+Patient Service
+     │
+     ▼
+billingStub.createBillingAccount()
+     │
+     ▼
+Stub converts request → protobuf
+     │
+     ▼
+HTTP/2 request sent
+     │
+     ▼
+Billing Service receives it
+     │
+     ▼
+BillingServiceImpl method executes
+     │
+     ▼
+Response returned
+
+Core Idea (architecture)
+Billing Service
+
+Acts as gRPC SERVER
+
+Exposes RPC methods (like APIs, but via gRPC)
+
+Patient Service
+
+Acts as gRPC CLIENT
+
+Calls Billing Service using those RPC methods

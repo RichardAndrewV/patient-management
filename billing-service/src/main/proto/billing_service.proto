@@ -1,0 +1,25 @@
+//we are defining gRPC service for billing service.
+syntax ="proto3";
+//it follows proto3 syntax
+option java_multiple_files=true;
+//separates service request and response files into separate one as it generated together while generating.
+option java_package="billing";
+
+//we are declaring a service here with all the methods in it.
+service BillingService{
+  //here using rpc we are creating a method and it receives a Billing request from patient service.
+  rpc CreateBillingAccount (BillingRequest) returns (BillingResponse);
+
+}
+//using the message keyword we r defining how the Billing Request will look i.e it is like a dto class with properties
+message BillingRequest{
+      string patientId=1;
+      string name=2;
+      string email=3;
+}
+message BillingResponse{
+  string AccountId=1;
+  string status=2;
+}
+//next we use dependencies in pom.xml for generating our server and objects for request and response
+//IMP --> to generate gRPC code for patient service to interact with the billing service we run some maven commands

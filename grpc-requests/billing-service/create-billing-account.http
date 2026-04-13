@@ -1,0 +1,9 @@
+#REST uses HTTP1 whereas gRPC uses HTTP2 so we can test our end point by HTTP itself
+#the first bit is the server address and the second is the service name as per the proto file and the last bit is the RPC method
+GRPC localhost:9001/BillingService/CreateBillingAccount
+
+{
+    "patientId": "12333",
+    "name" : "john doe",
+    "email" : "john.doe@example.com"
+}
